@@ -1,36 +1,41 @@
-require("dotenv").config();
-const express = require("express");
-const { Client, middleware } = require("@line/bot-sdk");
+const express = require('express');
+const axios = require('axios');
 
 const app = express();
-
-const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET
-};
-
-const client = new Client(config);
-
-app.use(middleware(config));
 app.use(express.json());
 
-app.post("/webhook", (req, res) => {
-  Promise
-    .all(req.body.events.map(handleEvent))
-    .then((result) => res.json(result));
+// LINEアクセストークンと送信先IDをここに設定
+const LINE_ACCESS_TOKEN = 'ここにあなたのチャネルアクセストークン';
+const USER_ID = 'ここにあなたのLINEユーザーID';
+
+app.post('/webhook', async (req, res) => {
+  const message = req.body.message || 'TradingViewから通知が届きました📈';
+
+  try {
+    await axios.post('https://api.line.me/v2/bot/message/push', {
+      to: USER_ID,
+      messages: [
+        {
+          type: 'text',
+          text: message
+        }
+      ]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LINE_ACCESS_TOKEN}`
+      }
+    });
+
+    res.status(200).send('Message sent to LINE!');
+  } catch (error) {
+    console.error('LINE送信失敗:', error.response?.data || error);
+    res.status(500).send('LINE送信エラー');
+  }
 });
 
-function handleEvent(event) {
-  if (event.type !== "message" || event.message.type !== "text") {
-    return Promise.resolve(null);
-  }
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: "しん、通知が届いたよ📈📩"
-  });
-}
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`LINE Bot listening on port ${port}`);
+// Renderが使うポート
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`サーバー起動中：ポート${PORT}`);
 });
