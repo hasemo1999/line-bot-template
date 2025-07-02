@@ -33,3 +33,22 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+// Webhook受信エンドポイント：ユーザーID取得用
+app.post('/webhook', (req, res) => {
+  const events = req.body.events;
+  if (!events || events.length === 0) {
+    return res.status(200).send('No events');
+  }
+
+  events.forEach(event => {
+    if (event.type === 'message' && event.message.type === 'text') {
+      const userId = event.source.userId;
+      const text = event.message.text;
+      console.log('🆔 送信者のユーザーID:', userId);
+      console.log('📩 メッセージ内容:', text);
+    }
+  });
+
+  res.status(200).send('OK');
+});
